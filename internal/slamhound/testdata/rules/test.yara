@@ -5,5 +5,5 @@ rule badthing
     strings:
         $1 = "bad thing"
     condition:
-        all of them
+        all of them and filename == "test.txt"
 }
