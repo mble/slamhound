@@ -14,7 +14,7 @@ import (
 	gzip "github.com/klauspost/pgzip"
 
 	"github.com/mble/go-yara"
-	"github.com/mble/slamhound/internal/untar"
+	"github.com/mble/slamhound/pkg/untar"
 )
 
 func setVariables(scanner *yara.Scanner, relPath string) error {

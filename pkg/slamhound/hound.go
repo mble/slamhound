@@ -8,7 +8,7 @@ import (
 
 	"github.com/karrick/godirwalk"
 	"github.com/mble/go-yara"
-	"github.com/mble/slamhound/internal/cfg"
+	"github.com/mble/slamhound/pkg/cfg"
 )
 
 // Hound is a struct that holds the relevant information,

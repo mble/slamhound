@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mble/slamhound/internal/cfg"
+	"github.com/mble/slamhound/pkg/cfg"
 )
 
 func TestNew(t *testing.T) {

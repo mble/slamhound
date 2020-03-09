@@ -58,6 +58,6 @@ Temporary Items
 .apdisk
 
 bin/slamhound
-internal/slamhound/testdata/large_test_data.tar.gz
+pkg/slamhound/testdata/large_test_data.tar.gz
 cpu.prof
 mem.prof

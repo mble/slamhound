@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/mble/slamhound/internal/cfg"
-	"github.com/mble/slamhound/internal/slamhound"
+	"github.com/mble/slamhound/pkg/cfg"
+	"github.com/mble/slamhound/pkg/slamhound"
 
 	"flag"
 	"log"
