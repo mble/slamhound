@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mble/go-yara"
+	"github.com/hillu/go-yara/v4"
 )
 
 // Result is a struct containing the results of scanning a file

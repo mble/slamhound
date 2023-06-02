@@ -10,10 +10,10 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/hillu/go-yara/v4"
 	"github.com/karrick/godirwalk"
 	gzip "github.com/klauspost/pgzip"
 
-	"github.com/mble/go-yara"
 	"github.com/mble/slamhound/pkg/untar"
 )
 
@@ -75,7 +75,9 @@ func inMemoryScan(rules *yara.Rules, filename string, skipList []string) ([]Resu
 			if err != nil {
 				return nil, err
 			}
-			matches, err := scanner.ScanMem(buf, 0, 0)
+			var matches yara.MatchRules
+			scanner.SetCallback(&matches)
+			err = scanner.ScanMem(buf)
 			if err != nil {
 				return nil, err
 			}
@@ -165,7 +167,9 @@ func fileScanner(rules *yara.Rules, done <-chan struct{}, paths <-chan string, r
 				return
 			}
 		}
-		matches, err := scanner.ScanFile(path, 0, 0)
+		var matches yara.MatchRules
+		scanner.SetCallback(&matches)
+		err = scanner.ScanFile(path)
 		select {
 		case results <- Result{path, matches, err}:
 		case <-done:

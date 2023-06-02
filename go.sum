@@ -1,8 +1,8 @@
+github.com/hillu/go-yara/v4 v4.3.2 h1:HGqUN3ORUduWZbb95RQjut4UzavGDbtt/C6SnGB3Amk=
+github.com/hillu/go-yara/v4 v4.3.2/go.mod h1:AHEs/FXVMQKVVlT6iG9d+q1BRr0gq0WoAWZQaZ0gS7s=
 github.com/karrick/godirwalk v1.15.3 h1:0a2pXOgtB16CqIqXTiT7+K9L73f74n/aNQUnH6Ortew=
 github.com/karrick/godirwalk v1.15.3/go.mod h1:j4mkqPuvaLI8mp1DroR3P6ad7cyYd4c1qeJ3RV7ULlk=
 github.com/klauspost/compress v1.9.8 h1:VMAMUUOh+gaxKTMk+zqbjsSjsIcUcL/LF4o63i82QyA=
 github.com/klauspost/compress v1.9.8/go.mod h1:RyIbtBH6LamlWaDj8nUwkbUhJ87Yi3uG0guNDohfE1A=
 github.com/klauspost/pgzip v1.2.1 h1:oIPZROsWuPHpOdMVWLuJZXwgjhrW8r1yEX8UqMyeNHM=
 github.com/klauspost/pgzip v1.2.1/go.mod h1:Ch1tH69qFZu15pkjo5kYi6mth2Zzwzt50oCQKQE9RUs=
-github.com/mble/go-yara v1.2.1 h1:FmqzHnjqswOhtaNX8+lXvAwwmyDAg2HXDShL7rzVvLs=
-github.com/mble/go-yara v1.2.1/go.mod h1:1l6NK7yc6IJYiBTh55Qr4FX0noTUnsG+TKjfK3MUSfY=

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hillu/go-yara/v4"
 	"github.com/karrick/godirwalk"
-	"github.com/mble/go-yara"
 	"github.com/mble/slamhound/pkg/cfg"
 )
 
