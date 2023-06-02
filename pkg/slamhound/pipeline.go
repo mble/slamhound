@@ -29,7 +29,7 @@ func setVariables(scanner *yara.Scanner, relPath string) error {
 	return nil
 }
 
-func inMemoryScan(rules yara.Rules, filename string, skipList []string) ([]Result, error) {
+func inMemoryScan(rules *yara.Rules, filename string, skipList []string) ([]Result, error) {
 	runtime.LockOSThread()
 	results := []Result{}
 	// Set up the tar reader
@@ -43,7 +43,7 @@ func inMemoryScan(rules yara.Rules, filename string, skipList []string) ([]Resul
 	}
 	defer gzr.Close()
 
-	scanner, err := yara.NewScanner(&rules)
+	scanner, err := yara.NewScanner(rules)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func inMemoryScan(rules yara.Rules, filename string, skipList []string) ([]Resul
 	return results, nil
 }
 
-func fileWalkScan(rules yara.Rules, directory string, skipList []string) ([]Result, error) {
+func fileWalkScan(rules *yara.Rules, directory string, skipList []string) ([]Result, error) {
 	results := []Result{}
 	done := make(chan struct{})
 	defer close(done)
@@ -149,9 +149,9 @@ func walkFiles(done <-chan struct{}, directory string, skipList []string) (<-cha
 	return paths, errc
 }
 
-func fileScanner(rules yara.Rules, done <-chan struct{}, paths <-chan string, results chan<- Result) {
+func fileScanner(rules *yara.Rules, done <-chan struct{}, paths <-chan string, results chan<- Result) {
 	runtime.LockOSThread()
-	scanner, err := yara.NewScanner(&rules)
+	scanner, err := yara.NewScanner(rules)
 	if err != nil {
 		results <- Result{Err: err}
 		return
