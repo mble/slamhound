@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hillu/go-yara/v4"
 	"github.com/karrick/godirwalk"
-	"github.com/mble/go-yara"
 	"github.com/mble/slamhound/pkg/cfg"
 )
 
@@ -15,7 +15,7 @@ import (
 // such as the rules and config for the scanner
 type Hound struct {
 	config *cfg.Config
-	rules  yara.Rules
+	rules  *yara.Rules
 }
 
 // Compile compiles the rules based on configuration and readies
@@ -33,7 +33,7 @@ func (h *Hound) Compile(rulesDir string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to compile rules: %w", err)
 	}
-	h.rules = *rules
+	h.rules = rules
 	return err
 }
 
@@ -56,7 +56,7 @@ func (h *Hound) CompileSingularRule(rule string) error {
 	if err != nil {
 		return err
 	}
-	h.rules = *rules
+	h.rules = rules
 	return err
 }
 

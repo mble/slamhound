@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mble/go-yara"
+	"github.com/hillu/go-yara/v4"
 )
 
 func TestFormatMatches(t *testing.T) {
