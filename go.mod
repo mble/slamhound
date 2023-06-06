@@ -1,6 +1,6 @@
 module github.com/mble/slamhound
 
-go 1.13
+go 1.19
 
 require (
 	github.com/hillu/go-yara/v4 v4.3.2

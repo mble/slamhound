@@ -1,0 +1,33 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  ci:
+    env:
+      YARA_VERSION: 4.3.1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+      - name: env
+        run: |
+          pwd
+          env
+          cat /etc/debian_version
+          go version
+          gcc --version
+          echo "YARA_VERSION=${YARA_VERSION}"
+      - name: install-yara
+        run: |
+          wget --no-verbose -O- https://github.com/VirusTotal/yara/archive/v${YARA_VERSION}.tar.gz | tar -C .. -xzf -
+          ( cd ../yara-${YARA_VERSION} && ./bootstrap.sh )
+          mkdir -p ../yara-build
+          ( cd ../yara-build && \
+            ../yara-${YARA_VERSION}/configure --disable-shared --prefix=${HOME}/prefix )
+          make -C ../yara-build install
+          find ${HOME}/prefix
+      - name: test
+        run: |
+          export PKG_CONFIG_PATH=${HOME}/prefix/lib/pkgconfig
+          go test -tags yara_static -v ./...
