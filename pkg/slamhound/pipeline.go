@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 	"sync"
 
 	"github.com/hillu/go-yara/v4"
-	"github.com/karrick/godirwalk"
 	gzip "github.com/klauspost/pgzip"
 
 	"github.com/mble/slamhound/pkg/untar"
@@ -131,21 +131,21 @@ func walkFiles(done <-chan struct{}, directory string, skipList []string) (<-cha
 
 	go func() {
 		defer close(paths)
-		errc <- godirwalk.Walk(directory, &godirwalk.Options{
-			Unsorted: true,
-			Callback: func(path string, de *godirwalk.Dirent) error {
-				switch {
-				case untar.IsSkippable(path, skipList):
-				case de.ModeType().IsRegular():
-					select {
-					case paths <- path:
-					case <-done:
-						return fmt.Errorf("walk cancelled")
-					}
-				default:
+		errc <- filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			switch {
+			case untar.IsSkippable(path, skipList):
+			case d.Type().IsRegular():
+				select {
+				case paths <- path:
+				case <-done:
+					return fmt.Errorf("walk cancelled")
 				}
-				return nil
-			},
+			default:
+			}
+			return nil
 		})
 	}()
 	return paths, errc
