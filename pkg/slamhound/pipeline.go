@@ -66,8 +66,7 @@ func inMemoryScan(rules *yara_x.Rules, filename string, skipList []string) ([]Re
 		case untar.IsSkippable(rel, skipList):
 		case mode.IsRegular():
 			buf := make([]byte, header.FileInfo().Size())
-			_, err := tr.Read(buf)
-			if err != nil && err != io.EOF {
+			if _, err := io.ReadFull(tr, buf); err != nil {
 				return nil, fmt.Errorf("error while reading into buffer: %v", err)
 			}
 			err = setVariables(scanner, rel)

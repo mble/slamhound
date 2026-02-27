@@ -48,15 +48,15 @@ func TestFormatMatches(t *testing.T) {
 			desc: "correctly formats matches when no matches",
 			result: Result{
 				Path:    "test.txt",
-				Matches: []MatchInfo{},
+				Matches: nil,
 			},
-			expected: []string{},
+			expected: nil,
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			formatted := tC.result.FormatMatches()
-			if !reflect.DeepEqual(tC.expected, formatted) && len(tC.expected) > 0 {
+			if !reflect.DeepEqual(tC.expected, formatted) {
 				t.Errorf("expected: %v, got: %v", tC.expected, formatted)
 			}
 		})
