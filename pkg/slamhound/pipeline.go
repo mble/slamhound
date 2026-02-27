@@ -7,48 +7,50 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 
-	"github.com/hillu/go-yara/v4"
+	yara_x "github.com/VirusTotal/yara-x/go"
 	gzip "github.com/klauspost/pgzip"
 
 	"github.com/mble/slamhound/pkg/untar"
 )
 
-func setVariables(scanner *yara.Scanner, relPath string) error {
-	err := scanner.DefineVariable("filename", filepath.Base(relPath))
-	if err != nil {
+func setVariables(scanner *yara_x.Scanner, relPath string) error {
+	if err := scanner.SetGlobal("filename", filepath.Base(relPath)); err != nil {
 		return err
 	}
-	err = scanner.DefineVariable("filepath", relPath)
-	if err != nil {
+	if err := scanner.SetGlobal("filepath", relPath); err != nil {
 		return err
 	}
 	return nil
 }
 
-func inMemoryScan(rules *yara.Rules, filename string, skipList []string) ([]Result, error) {
-	runtime.LockOSThread()
+func scanResultsToMatchInfo(results *yara_x.ScanResults) []MatchInfo {
+	rules := results.MatchingRules()
+	infos := make([]MatchInfo, len(rules))
+	for i, r := range rules {
+		infos[i] = MatchInfo{Namespace: r.Namespace(), Identifier: r.Identifier()}
+	}
+	return infos
+}
+
+func inMemoryScan(rules *yara_x.Rules, filename string, skipList []string) ([]Result, error) {
 	results := []Result{}
-	// Set up the tar reader
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("could not open file %s: %w", filename, err)
 	}
+	defer f.Close()
 	gzr, err := gzip.NewReader(f)
 	if err != nil {
 		return nil, err
 	}
 	defer gzr.Close()
 
-	scanner, err := yara.NewScanner(rules)
-	if err != nil {
-		return nil, fmt.Errorf("could not create scanner: %w", err)
-	}
+	scanner := yara_x.NewScanner(rules)
+	defer scanner.Destroy()
 	tr := tar.NewReader(gzr)
 
-	// Scan each tar segment non-recursively
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -61,7 +63,6 @@ func inMemoryScan(rules *yara.Rules, filename string, skipList []string) ([]Resu
 		mode := header.FileInfo().Mode()
 
 		switch {
-		// Noop if skippable
 		case untar.IsSkippable(rel, skipList):
 		case mode.IsRegular():
 			buf := make([]byte, header.FileInfo().Size())
@@ -69,27 +70,22 @@ func inMemoryScan(rules *yara.Rules, filename string, skipList []string) ([]Resu
 			if err != nil && err != io.EOF {
 				return nil, fmt.Errorf("error while reading into buffer: %v", err)
 			}
-			// buf is essentially an in memory file. We need to set up the external variables
 			err = setVariables(scanner, rel)
 			if err != nil {
 				return nil, err
 			}
-			var matches yara.MatchRules
-			scanner.SetCallback(&matches)
-			err = scanner.ScanMem(buf)
+			scanResults, err := scanner.Scan(buf)
 			if err != nil {
 				return nil, err
 			}
-			results = append(results, Result{rel, matches, err})
+			results = append(results, Result{Path: rel, Matches: scanResultsToMatchInfo(scanResults)})
 		default:
-			// Noop, we don't care about directories or symlinks
-			// right now
 		}
 	}
 	return results, nil
 }
 
-func fileWalkScan(rules *yara.Rules, directory string, skipList []string) ([]Result, error) {
+func fileWalkScan(rules *yara_x.Rules, directory string, skipList []string) ([]Result, error) {
 	results := []Result{}
 	done := make(chan struct{})
 	defer close(done)
@@ -97,7 +93,7 @@ func fileWalkScan(rules *yara.Rules, directory string, skipList []string) ([]Res
 	paths, errc := walkFiles(done, directory, skipList)
 	res := make(chan Result)
 	var wg sync.WaitGroup
-	const numScanners = 32 // YR_MAX_THREADS
+	const numScanners = 32
 	wg.Add(numScanners)
 	for i := 0; i < numScanners; i++ {
 		go func() {
@@ -150,27 +146,30 @@ func walkFiles(done <-chan struct{}, directory string, skipList []string) (<-cha
 	return paths, errc
 }
 
-func fileScanner(rules *yara.Rules, done <-chan struct{}, paths <-chan string, results chan<- Result) {
-	runtime.LockOSThread()
-	scanner, err := yara.NewScanner(rules)
-	if err != nil {
-		results <- Result{Err: err}
-		return
-	}
+func fileScanner(rules *yara_x.Rules, done <-chan struct{}, paths <-chan string, results chan<- Result) {
+	scanner := yara_x.NewScanner(rules)
+	defer scanner.Destroy()
 	for path := range paths {
-		err = setVariables(scanner, path)
+		err := setVariables(scanner, path)
 		if err != nil {
 			select {
 			case results <- Result{Err: err}:
 			case <-done:
 				return
 			}
+			continue
 		}
-		var matches yara.MatchRules
-		scanner.SetCallback(&matches)
-		err = scanner.ScanFile(path)
+		scanResults, err := scanner.ScanFile(path)
+		if err != nil {
+			select {
+			case results <- Result{Err: err}:
+			case <-done:
+				return
+			}
+			continue
+		}
 		select {
-		case results <- Result{path, matches, err}:
+		case results <- Result{Path: path, Matches: scanResultsToMatchInfo(scanResults)}:
 		case <-done:
 			return
 		}
