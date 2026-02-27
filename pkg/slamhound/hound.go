@@ -68,16 +68,18 @@ func (h *Hound) ScanDirectory(directory string) ([]Result, error) {
 
 // New returns an initialised Hound struct
 func New(config *cfg.Config) (*Hound, error) {
-	var err error
 	h := &Hound{config: config}
-
 	if config.RulesDir != "" {
-		err = h.Compile(config.RulesDir)
+		if err := h.Compile(config.RulesDir); err != nil {
+			return h, err
+		}
 	}
 	if config.Rule != "" {
-		err = h.CompileSingularRule(config.Rule)
+		if err := h.CompileSingularRule(config.Rule); err != nil {
+			return h, err
+		}
 	}
-	return h, err
+	return h, nil
 }
 
 func prepareExternalVars(compiler *yara_x.Compiler) error {
