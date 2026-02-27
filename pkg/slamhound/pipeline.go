@@ -2,11 +2,15 @@ package slamhound
 
 import (
 	"archive/tar"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	yara_x "github.com/VirusTotal/yara-x/go"
@@ -14,6 +18,10 @@ import (
 
 	"github.com/mble/slamhound/pkg/untar"
 )
+
+// maxScanSize is the maximum file size (512 MiB) that will be scanned
+// in memory from an archive. Files larger than this are skipped with a warning.
+const maxScanSize = 512 << 20
 
 func setVariables(scanner *yara_x.Scanner, relPath string) error {
 	if err := scanner.SetGlobal("filename", filepath.Base(relPath)); err != nil {
@@ -53,7 +61,7 @@ func inMemoryScan(rules *yara_x.Rules, filename string, skipList []string) ([]Re
 
 	for {
 		header, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -65,7 +73,15 @@ func inMemoryScan(rules *yara_x.Rules, filename string, skipList []string) ([]Re
 		switch {
 		case untar.IsSkippable(rel, skipList):
 		case mode.IsRegular():
-			buf := make([]byte, header.FileInfo().Size())
+			size := header.Size
+			if size == 0 {
+				continue
+			}
+			if size > maxScanSize {
+				slog.Warn("skipping oversized file in archive", "path", rel, "size", size, "max", maxScanSize)
+				continue
+			}
+			buf := make([]byte, size)
 			if _, err := io.ReadFull(tr, buf); err != nil {
 				return nil, fmt.Errorf("error while reading into buffer: %v", err)
 			}
@@ -85,19 +101,18 @@ func inMemoryScan(rules *yara_x.Rules, filename string, skipList []string) ([]Re
 }
 
 func fileWalkScan(rules *yara_x.Rules, directory string, skipList []string) ([]Result, error) {
-	results := []Result{}
-	done := make(chan struct{})
-	defer close(done)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	paths, errc := walkFiles(done, directory, skipList)
+	paths, errc := walkFiles(ctx, directory, skipList)
 	res := make(chan Result)
 	var wg sync.WaitGroup
-	const numScanners = 32
+	numScanners := runtime.NumCPU()
 	wg.Add(numScanners)
-	for i := 0; i < numScanners; i++ {
+	for range numScanners {
 		go func() {
-			fileScanner(rules, done, paths, res)
-			wg.Done()
+			defer wg.Done()
+			fileScanner(ctx, rules, paths, res)
 		}()
 	}
 	go func() {
@@ -105,21 +120,32 @@ func fileWalkScan(rules *yara_x.Rules, directory string, skipList []string) ([]R
 		close(res)
 	}()
 
+	var results []Result
+	var scanErr error
 	for r := range res {
 		if r.Err != nil {
-			return nil, r.Err
+			scanErr = r.Err
+			cancel()
+			break
 		}
 		results = append(results, r)
 	}
-
-	if err := <-errc; err != nil {
-		return nil, err
+	// Drain remaining results to let goroutines exit.
+	if scanErr != nil {
+		for range res {
+		}
 	}
 
+	if err := <-errc; err != nil && scanErr == nil {
+		return nil, err
+	}
+	if scanErr != nil {
+		return nil, scanErr
+	}
 	return results, nil
 }
 
-func walkFiles(done <-chan struct{}, directory string, skipList []string) (<-chan string, <-chan error) {
+func walkFiles(ctx context.Context, directory string, skipList []string) (<-chan string, <-chan error) {
 	paths := make(chan string)
 	errc := make(chan error, 1)
 
@@ -134,7 +160,7 @@ func walkFiles(done <-chan struct{}, directory string, skipList []string) (<-cha
 			case d.Type().IsRegular():
 				select {
 				case paths <- path:
-				case <-done:
+				case <-ctx.Done():
 					return fmt.Errorf("walk cancelled")
 				}
 			default:
@@ -145,7 +171,7 @@ func walkFiles(done <-chan struct{}, directory string, skipList []string) (<-cha
 	return paths, errc
 }
 
-func fileScanner(rules *yara_x.Rules, done <-chan struct{}, paths <-chan string, results chan<- Result) {
+func fileScanner(ctx context.Context, rules *yara_x.Rules, paths <-chan string, results chan<- Result) {
 	scanner := yara_x.NewScanner(rules)
 	defer scanner.Destroy()
 	for path := range paths {
@@ -153,7 +179,7 @@ func fileScanner(rules *yara_x.Rules, done <-chan struct{}, paths <-chan string,
 		if err != nil {
 			select {
 			case results <- Result{Err: err}:
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 			continue
@@ -162,14 +188,14 @@ func fileScanner(rules *yara_x.Rules, done <-chan struct{}, paths <-chan string,
 		if err != nil {
 			select {
 			case results <- Result{Err: err}:
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 			continue
 		}
 		select {
 		case results <- Result{Path: path, Matches: scanResultsToMatchInfo(scanResults)}:
-		case <-done:
+		case <-ctx.Done():
 			return
 		}
 	}
