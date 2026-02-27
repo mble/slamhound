@@ -3,8 +3,6 @@ package slamhound
 import (
 	"reflect"
 	"testing"
-
-	"github.com/hillu/go-yara/v4"
 )
 
 func TestFormatMatches(t *testing.T) {
@@ -17,10 +15,9 @@ func TestFormatMatches(t *testing.T) {
 			desc: "correctly formats matches when only one match",
 			result: Result{
 				Path: "test.txt",
-				Matches: []yara.MatchRule{{
-					Rule:      "ruleset",
-					Namespace: "rules.test",
-					Tags:      []string{},
+				Matches: []MatchInfo{{
+					Namespace:  "rules.test",
+					Identifier: "ruleset",
 				}},
 			},
 			expected: []string{
@@ -31,16 +28,14 @@ func TestFormatMatches(t *testing.T) {
 			desc: "correctly formats matches when multiple matches",
 			result: Result{
 				Path: "test.txt",
-				Matches: []yara.MatchRule{
+				Matches: []MatchInfo{
 					{
-						Rule:      "ruleset",
-						Namespace: "rules.test",
-						Tags:      []string{},
+						Namespace:  "rules.test",
+						Identifier: "ruleset",
 					},
 					{
-						Rule:      "ruleset",
-						Namespace: "rules.test2",
-						Tags:      []string{},
+						Namespace:  "rules.test2",
+						Identifier: "ruleset",
 					},
 				},
 			},
@@ -53,7 +48,7 @@ func TestFormatMatches(t *testing.T) {
 			desc: "correctly formats matches when no matches",
 			result: Result{
 				Path:    "test.txt",
-				Matches: []yara.MatchRule{},
+				Matches: []MatchInfo{},
 			},
 			expected: []string{},
 		},
@@ -78,16 +73,14 @@ func TestMarshsalJSON(t *testing.T) {
 			desc: "correctly marshals result into JSON when there are matches",
 			result: Result{
 				Path: "test.txt",
-				Matches: []yara.MatchRule{
+				Matches: []MatchInfo{
 					{
-						Rule:      "ruleset",
-						Namespace: "rules.test",
-						Tags:      []string{},
+						Namespace:  "rules.test",
+						Identifier: "ruleset",
 					},
 					{
-						Rule:      "ruleset",
-						Namespace: "rules.test2",
-						Tags:      []string{},
+						Namespace:  "rules.test2",
+						Identifier: "ruleset",
 					},
 				},
 			},
@@ -97,7 +90,7 @@ func TestMarshsalJSON(t *testing.T) {
 			desc: "correctly marshals result into JSON when there are no matches",
 			result: Result{
 				Path:    "test.txt",
-				Matches: []yara.MatchRule{},
+				Matches: []MatchInfo{},
 			},
 			expected: `{"path":"test.txt","matches":null}`,
 		},

@@ -4,15 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-
-	"github.com/hillu/go-yara/v4"
 )
+
+// MatchInfo holds the namespace and identifier of a matched rule
+type MatchInfo struct {
+	Namespace  string
+	Identifier string
+}
 
 // Result is a struct containing the results of scanning a file
 type Result struct {
-	Path    string           `json:"path"`
-	Matches []yara.MatchRule `json:"matches"`
-	Err     error            `json:"error,omitempty"`
+	Path    string      `json:"path"`
+	Matches []MatchInfo `json:"matches"`
+	Err     error       `json:"error,omitempty"`
 }
 
 // FormatMatches returns a slice of strings corresponding to the matched
@@ -20,7 +24,7 @@ type Result struct {
 func (r *Result) FormatMatches() []string {
 	var formatted []string
 	for _, match := range r.Matches {
-		f := fmt.Sprintf("%s.%s", match.Namespace, match.Rule)
+		f := fmt.Sprintf("%s.%s", match.Namespace, match.Identifier)
 		formatted = append(formatted, f)
 	}
 	return formatted
