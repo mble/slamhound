@@ -57,6 +57,7 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+.worktrees/
 bin/slamhound
 pkg/slamhound/testdata/large_test_data.tar.gz
 cpu.prof
