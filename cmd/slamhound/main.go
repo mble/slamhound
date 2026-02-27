@@ -1,15 +1,14 @@
 package main
 
 import (
+	"flag"
+	"log/slog"
 	"os"
 	"runtime"
 	"runtime/pprof"
 
 	"github.com/mble/slamhound/pkg/cfg"
 	"github.com/mble/slamhound/pkg/slamhound"
-
-	"flag"
-	"log"
 )
 
 func main() {
@@ -30,7 +29,8 @@ func main() {
 
 	args := flag.Args()
 	if len(args) == 0 {
-		log.Fatal("no targets specified")
+		slog.Error("no targets specified")
+		os.Exit(1)
 	}
 
 	config, err := conf.LoadConfig(
@@ -42,24 +42,28 @@ func main() {
 	)
 
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	if config.EnableCPUProfile {
 		f, err := os.Create("cpu.prof")
 		if err != nil {
-			log.Fatal("could not create CPU profile: ", err)
+			slog.Error("could not create CPU profile", "error", err)
+			os.Exit(1)
 		}
 		defer f.Close()
 		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatal("could not start CPU profile: ", err)
+			slog.Error("could not start CPU profile", "error", err)
+			os.Exit(1)
 		}
 		defer pprof.StopCPUProfile()
 	}
 
 	hound, err := slamhound.New(config)
 	if err != nil {
-		log.Fatalf("failed to create scanner: %v", err)
+		slog.Error("failed to create scanner", "error", err)
+		os.Exit(1)
 	}
 
 	for _, target := range args {
@@ -70,7 +74,8 @@ func main() {
 
 		fi, err := os.Stat(target)
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("failed to stat target", "target", target, "error", err)
+			os.Exit(1)
 		}
 		switch mode := fi.Mode(); {
 		case mode.IsDir():
@@ -78,11 +83,13 @@ func main() {
 		case mode.IsRegular():
 			results, err = hound.ScanArchive(target)
 		default:
-			log.Fatalf("cannot scan non-directories or non-files")
+			slog.Error("cannot scan non-directories or non-files", "target", target)
+			os.Exit(1)
 		}
 
 		if err != nil {
-			log.Fatalf("error while scanning: %v", err)
+			slog.Error("error while scanning", "target", target, "error", err)
+			os.Exit(1)
 		}
 		for _, result := range results {
 			result.LogResult()
@@ -92,12 +99,14 @@ func main() {
 	if config.EnableMemProfile {
 		f, err := os.Create("mem.prof")
 		if err != nil {
-			log.Fatal("could not create memory profile: ", err)
+			slog.Error("could not create memory profile", "error", err)
+			os.Exit(1)
 		}
 		defer f.Close()
 		runtime.GC() // get up-to-date statistics
 		if err := pprof.WriteHeapProfile(f); err != nil {
-			log.Fatal("could not write memory profile: ", err)
+			slog.Error("could not write memory profile", "error", err)
+			os.Exit(1)
 		}
 	}
 }
