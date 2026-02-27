@@ -2,6 +2,7 @@ package slamhound
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/mble/slamhound/pkg/cfg"
@@ -35,13 +36,21 @@ func TestNew(t *testing.T) {
 			},
 			expectedErr: "could not open rule file testdata/rules/nonexistant.yara: open testdata/rules/nonexistant.yara: no such file or directory",
 		},
+		{
+			desc: "returns error with invalid rules directory",
+			conf: &cfg.Config{
+				RulesDir: "testdata/nonexistent_dir",
+				SkipList: []string{},
+			},
+			expectedErr: "failed to compile from rules dir testdata/nonexistent_dir",
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			hound, err := New(tC.conf)
 			if err != nil {
-				if err.Error() != tC.expectedErr {
-					t.Errorf("expected: %s, got: %s", tC.expectedErr, err.Error())
+				if !strings.Contains(err.Error(), tC.expectedErr) {
+					t.Errorf("expected error containing: %s, got: %s", tC.expectedErr, err.Error())
 				}
 			}
 			if !reflect.DeepEqual(hound.config, tC.conf) {
@@ -142,5 +151,23 @@ func TestScanDirectory(t *testing.T) {
 				t.Errorf("expected: %d, got: %d", tC.expectedResLen, len(res))
 			}
 		})
+	}
+}
+
+func TestScanDirectoryEmpty(t *testing.T) {
+	dir := t.TempDir()
+	hound, err := New(&cfg.Config{
+		Rule:     "testdata/rules/test.yara",
+		SkipList: []string{},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	res, err := hound.ScanDirectory(dir)
+	if err != nil {
+		t.Fatalf("unexpected error scanning empty dir: %v", err)
+	}
+	if len(res) != 0 {
+		t.Errorf("expected 0 results for empty directory, got %d", len(res))
 	}
 }
