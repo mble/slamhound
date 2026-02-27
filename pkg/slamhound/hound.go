@@ -2,12 +2,12 @@ package slamhound
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/hillu/go-yara/v4"
-	"github.com/karrick/godirwalk"
 	"github.com/mble/slamhound/pkg/cfg"
 )
 
@@ -125,18 +125,13 @@ func compileRules(compiler *yara.Compiler, ruleDir string) error {
 	if err != nil {
 		return err
 	}
-	err = godirwalk.Walk(ruleDir, &godirwalk.Options{
-		Unsorted: true,
-		Callback: func(path string, de *godirwalk.Dirent) error {
-			if de.ModeType().IsRegular() {
-				err = addRuleToCompiler(compiler, path)
-				if err != nil {
-					return err
-				}
-				return nil
-			}
-			return nil
-		},
+	return filepath.WalkDir(ruleDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Type().IsRegular() {
+			return addRuleToCompiler(compiler, path)
+		}
+		return nil
 	})
-	return err
 }
