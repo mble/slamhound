@@ -3,7 +3,7 @@ package slamhound
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/hillu/go-yara/v4"
 )
@@ -37,23 +37,19 @@ func (r *Result) MarshalJSON() ([]byte, error) {
 		Matches: r.FormatMatches(),
 	})
 
-	if err != nil {
-		log.Fatal(err)
-	}
-	return marshalled, nil
+	return marshalled, err
 }
 
 // LogResult prints the result, showing matches for a particular filepath
 func (r *Result) LogResult() {
 	if r.Err == nil {
 		if len(r.Matches) > 0 {
-			marshalled, err := json.Marshal(r)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("[+] %s", marshalled)
+			slog.Info("match",
+				"path", r.Path,
+				"matches", r.FormatMatches(),
+			)
 		}
 	} else {
-		log.Printf("error: %s.", r.Err)
+		slog.Error("scan error", "error", r.Err)
 	}
 }
