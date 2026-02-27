@@ -4,30 +4,21 @@ _Go on boy, git!_
 
 ## Prerequisites
 
-- `yara`
-- `openssl`
+- [YARA-X](https://github.com/VirusTotal/yara-x) C library (`libyara_x_capi`)
 
-You'll need to install these with your relevant package manger for your platform.
+The YARA-X C library, headers, and pkgconfig file must be installed to a standard path (e.g. `/usr/local`). See the [YARA-X documentation](https://virustotal.github.io/yara-x/) for build instructions.
 
 ## Installation
 
-### Linux
-
 ```
-go install -i github.com/mble/slamhound/cmd/slamhound
+go install github.com/mble/slamhound/cmd/slamhound@latest
 ```
 
-### macOS
-
-```
-PKG_CONFIG_PATH="$(brew --prefix yara)/lib/pkgconfig:$(brew --prefix openssl@1.1)/lib/pkgconfig" go install -i github.com/mble/slamhound/cmd/slamhound
-```
-
-You can also clone the repo and use `make` to build. The built binary will at `bin/slamhound`.
+You can also clone the repo and use `make` to build. The built binary will be at `bin/slamhound`.
 
 ## Usage
 
-`slamhound` is a wrapper around `go-yara` intended to provide high performance scanning of gzipped tarballs and directories, and accepts the following options:
+`slamhound` uses [YARA-X](https://github.com/VirusTotal/yara-x) to provide high performance scanning of gzipped tarballs and directories, and accepts the following options:
 
 ```
 $ slamhound --help
@@ -48,23 +39,22 @@ Example usage:
 
 ```
 $ slamhound -rule rules/APT_Carbanak.yar -skiplist=.git,.ssh evil_archive.tar.gz
-2020/02/29 15:21:58 [+] {"path":"test.txt","matches":["rules.APT_Carbanak.Carbanak_0915_2"]}
+{"path":"test.txt","matches":["rules.APT_Carbanak.Carbanak_0915_2"]}
 ```
 
 Targets can be gzipped tarballs or directories. Other file types are not valid inputs.
-It is also possible to specify a directory rules to be used. This directory will be traversed recursively and compile all rule files contained within the tree:
+It is also possible to specify a directory of rules to be used. This directory will be traversed recursively and compile all rule files contained within the tree:
 
 ```
 $ slamhound -rules rules/ -skiplist=.git,.ssh evil_archive.tar.gz
-2020/02/29 15:21:58 [+] {"path":"test.txt","matches":["rules.APT_Carbanak.Carbanak_0915_2"]}
-2020/02/29 15:21:58 [+] {"path":"test2.txt","matches":["rules.RAT_CrossRAT.CrossRAT"]}
+{"path":"test.txt","matches":["rules.APT_Carbanak.Carbanak_0915_2"]}
+{"path":"test2.txt","matches":["rules.RAT_CrossRAT.CrossRAT"]}
 ```
 
 ### Limitations
 
 - Does not currently support additional external variables. `filename` and `filepath` are exposed to YARA rules through `slamhound`.
 - Does not accept archives other than gzipped tarballs.
-- Developed against YARA 3.11.
 
 ### Trivia
 
