@@ -2,6 +2,7 @@ package untar
 
 import (
 	"archive/tar"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -50,7 +51,7 @@ func Untar(reader io.Reader, dir string, skipList []string) error {
 	for {
 		header, err := tr.Next()
 		// End of file, so break
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		// Something went wrong
