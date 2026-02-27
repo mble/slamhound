@@ -14,7 +14,6 @@ type Config struct {
 	EnableMemProfile bool
 	RulesDir         string
 	Rule             string
-	TargetDir        string
 }
 
 // LoadConfig loads config from given flags
