@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -45,7 +44,7 @@ func inMemoryScan(rules *yara.Rules, filename string, skipList []string) ([]Resu
 
 	scanner, err := yara.NewScanner(rules)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("could not create scanner: %w", err)
 	}
 	tr := tar.NewReader(gzr)
 
