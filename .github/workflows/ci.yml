@@ -19,7 +19,8 @@ jobs:
           sudo cp target/release/libyara_x_capi.so /usr/local/lib/
           sudo cp target/release/libyara_x_capi.a /usr/local/lib/
           sudo cp capi/include/yara_x.h /usr/local/include/
-          sudo cp capi/yara_x_capi.pc /usr/local/lib/pkgconfig/ || \
+          sudo mkdir -p /usr/local/lib/pkgconfig
+          sudo cp capi/yara_x_capi.pc /usr/local/lib/pkgconfig/ 2>/dev/null || \
             sudo tee /usr/local/lib/pkgconfig/yara_x_capi.pc <<'PKGEOF'
           prefix=/usr/local
           exec_prefix=${prefix}
