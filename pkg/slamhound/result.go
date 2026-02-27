@@ -16,13 +16,13 @@ type MatchInfo struct {
 type Result struct {
 	Path    string      `json:"path"`
 	Matches []MatchInfo `json:"matches"`
-	Err     error       `json:"error,omitempty"`
+	Err     error       `json:"-"`
 }
 
 // FormatMatches returns a slice of strings corresponding to the matched
 // namespaced rules
 func (r *Result) FormatMatches() []string {
-	var formatted []string
+	formatted := make([]string, 0, len(r.Matches))
 	for _, match := range r.Matches {
 		f := fmt.Sprintf("%s.%s", match.Namespace, match.Identifier)
 		formatted = append(formatted, f)

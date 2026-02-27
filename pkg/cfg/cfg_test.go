@@ -2,7 +2,7 @@ package cfg
 
 import "testing"
 
-func TestLoadConfig(t *testing.T) {
+func TestNewConfig(t *testing.T) {
 	testCases := []struct {
 		desc             string
 		skipList         string
@@ -56,12 +56,13 @@ func TestLoadConfig(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			c := &Config{}
-			c, err := c.LoadConfig(tC.rule, tC.ruleDir, tC.skipList, tC.enableCPUProfile, tC.enableMemProfile)
+			_, err := NewConfig(tC.rule, tC.ruleDir, tC.skipList, tC.enableCPUProfile, tC.enableMemProfile)
 			if err != nil {
 				if err.Error() != tC.expectedErr {
-					t.Error(err)
+					t.Errorf("expected error %q, got %q", tC.expectedErr, err.Error())
 				}
+			} else if tC.expectedErr != "" {
+				t.Errorf("expected error %q, got nil", tC.expectedErr)
 			}
 		})
 	}

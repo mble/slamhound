@@ -52,6 +52,8 @@ func TestNew(t *testing.T) {
 				if !strings.Contains(err.Error(), tC.expectedErr) {
 					t.Errorf("expected error containing: %s, got: %s", tC.expectedErr, err.Error())
 				}
+			} else if tC.expectedErr != "" {
+				t.Errorf("expected error %q, got nil", tC.expectedErr)
 			}
 			if !reflect.DeepEqual(hound.config, tC.conf) {
 				t.Fail()
@@ -99,6 +101,8 @@ func TestScanArchive(t *testing.T) {
 				if err.Error() != tC.expectedErr {
 					t.Errorf("expected: %s, got: %s", tC.expectedErr, err.Error())
 				}
+			} else if tC.expectedErr != "" {
+				t.Errorf("expected error %q, got nil", tC.expectedErr)
 			}
 			if len(res) != tC.expectedResLen {
 				t.Errorf("expected: %d, got: %d", tC.expectedResLen, len(res))
@@ -122,7 +126,7 @@ func TestScanDirectory(t *testing.T) {
 				Rule:     "testdata/rules/test.yara",
 				SkipList: []string{".git", ".profile.d"},
 			},
-			expectedResLen: 3,
+			expectedResLen: 1,
 		},
 		{
 			desc:   "gracefully handles error with invalid target",
@@ -146,6 +150,8 @@ func TestScanDirectory(t *testing.T) {
 				if err.Error() != tC.expectedErr {
 					t.Errorf("expected: %s, got: %s", tC.expectedErr, err.Error())
 				}
+			} else if tC.expectedErr != "" {
+				t.Errorf("expected error %q, got nil", tC.expectedErr)
 			}
 			if len(res) != tC.expectedResLen {
 				t.Errorf("expected: %d, got: %d", tC.expectedResLen, len(res))

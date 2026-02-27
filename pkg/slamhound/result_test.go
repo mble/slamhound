@@ -51,7 +51,7 @@ func TestFormatMatches(t *testing.T) {
 				Path:    "test.txt",
 				Matches: nil,
 			},
-			expected: nil,
+			expected: []string{},
 		},
 	}
 	for _, tC := range testCases {
@@ -93,7 +93,7 @@ func TestMarshsalJSON(t *testing.T) {
 				Path:    "test.txt",
 				Matches: []MatchInfo{},
 			},
-			expected: `{"path":"test.txt","matches":null}`,
+			expected: `{"path":"test.txt","matches":[]}`,
 		},
 		{
 			desc: "correctly marshals error as string in JSON",
@@ -102,7 +102,7 @@ func TestMarshsalJSON(t *testing.T) {
 				Matches: []MatchInfo{},
 				Err:     errors.New("scan failed"),
 			},
-			expected: `{"path":"test.txt","matches":null,"error":"scan failed"}`,
+			expected: `{"path":"test.txt","matches":[],"error":"scan failed"}`,
 		},
 	}
 	for _, tC := range testCases {

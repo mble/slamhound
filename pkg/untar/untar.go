@@ -12,16 +12,19 @@ import (
 	gzip "github.com/klauspost/pgzip"
 )
 
+// maxExtractSize is the maximum file size (1 GiB) that will be extracted
+// from an archive. Files larger than this cause an error.
+const maxExtractSize = 1 << 30
+
 // IsSkippable checks if a given path is skippable based
 // on matching the patterns in skipList
 func IsSkippable(path string, skipList []string) bool {
-	skippable := false
 	for _, pattern := range skipList {
 		if strings.Contains(path, pattern) {
-			skippable = true
+			return true
 		}
 	}
-	return skippable
+	return false
 }
 
 // IsIllegalPath is a zip-slip mitigation. symlinks can be used to get around this,
@@ -84,12 +87,15 @@ func Untar(reader io.Reader, dir string, skipList []string) error {
 			if err != nil {
 				return fmt.Errorf("could not create file handle %s: %v", abs, err)
 			}
-			sizeBytes, err := io.Copy(file, tr)
+			sizeBytes, err := io.Copy(file, io.LimitReader(tr, maxExtractSize+1))
 			if closeErr := file.Close(); closeErr != nil && err == nil {
 				err = closeErr
 			}
 			if err != nil {
 				return fmt.Errorf("error writing to %s: %v", abs, err)
+			}
+			if sizeBytes > maxExtractSize {
+				return fmt.Errorf("file %s exceeds maximum extraction size (%d bytes)", abs, maxExtractSize)
 			}
 			// Handle not writing the correct number of bytes out
 			if sizeBytes != header.Size {

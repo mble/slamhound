@@ -16,20 +16,21 @@ type Config struct {
 	Rule             string
 }
 
-// LoadConfig loads config from given flags
-func (c Config) LoadConfig(rule, ruleDir, skipList string, enableCPUProfile, enableMemProfile bool) (*Config, error) {
+// NewConfig creates and validates a Config from the given flags
+func NewConfig(rule, ruleDir, skipList string, enableCPUProfile, enableMemProfile bool) (*Config, error) {
 	if ruleDir == "" && rule == "" {
 		return nil, errors.New("no rule directory or rule specified")
 	}
 	if ruleDir != "" && rule != "" {
 		return nil, errors.New("can't pass both singular rule and rule directory")
 	}
-	c.Rule = rule
-	c.RulesDir = ruleDir
-	c.SkipList = processSkipList(skipList)
-	c.EnableCPUProfile = enableCPUProfile
-	c.EnableMemProfile = enableMemProfile
-	return &c, nil
+	return &Config{
+		Rule:             rule,
+		RulesDir:         ruleDir,
+		SkipList:         processSkipList(skipList),
+		EnableCPUProfile: enableCPUProfile,
+		EnableMemProfile: enableMemProfile,
+	}, nil
 }
 
 func processSkipList(rawList string) []string {

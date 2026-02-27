@@ -99,7 +99,7 @@ func addRuleToCompiler(compiler *yara_x.Compiler, rule string) error {
 		if err != nil {
 			return fmt.Errorf("could not open rule file %s: %w", rule, err)
 		}
-		namespace := strings.ReplaceAll(strings.ReplaceAll(rule, ext, ""), "/", ".")
+		namespace := strings.ReplaceAll(strings.TrimSuffix(rule, ext), "/", ".")
 		compiler.NewNamespace(namespace)
 		if err := compiler.AddSource(string(content), yara_x.WithOrigin(rule)); err != nil {
 			return fmt.Errorf("could not compile rule file %s: %w", rule, err)

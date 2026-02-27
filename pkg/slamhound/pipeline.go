@@ -93,7 +93,10 @@ func inMemoryScan(rules *yara_x.Rules, filename string, skipList []string) ([]Re
 			if err != nil {
 				return nil, err
 			}
-			results = append(results, Result{Path: rel, Matches: scanResultsToMatchInfo(scanResults)})
+			matches := scanResultsToMatchInfo(scanResults)
+			if len(matches) > 0 {
+				results = append(results, Result{Path: rel, Matches: matches})
+			}
 		default:
 		}
 	}
@@ -157,6 +160,9 @@ func walkFiles(ctx context.Context, directory string, skipList []string) (<-chan
 			}
 			switch {
 			case untar.IsSkippable(path, skipList):
+				if d.IsDir() {
+					return fs.SkipDir
+				}
 			case d.Type().IsRegular():
 				select {
 				case paths <- path:
@@ -193,10 +199,13 @@ func fileScanner(ctx context.Context, rules *yara_x.Rules, paths <-chan string, 
 			}
 			continue
 		}
-		select {
-		case results <- Result{Path: path, Matches: scanResultsToMatchInfo(scanResults)}:
-		case <-ctx.Done():
-			return
+		matches := scanResultsToMatchInfo(scanResults)
+		if len(matches) > 0 {
+			select {
+			case results <- Result{Path: path, Matches: matches}:
+			case <-ctx.Done():
+				return
+			}
 		}
 	}
 }

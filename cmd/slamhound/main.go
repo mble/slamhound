@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"runtime"
@@ -12,13 +13,19 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var (
 		rule             string
 		ruleDir          string
 		skipList         string
 		enableCPUProfile bool
 		enableMemProfile bool
-		conf             cfg.Config
 	)
 	flag.StringVar(&rule, "rule", "", "compile specific rule")
 	flag.StringVar(&ruleDir, "rules", "", "compile rules from directory")
@@ -29,67 +36,58 @@ func main() {
 
 	args := flag.Args()
 	if len(args) == 0 {
-		slog.Error("no targets specified")
-		os.Exit(1)
+		return fmt.Errorf("no targets specified")
 	}
 
-	config, err := conf.LoadConfig(
+	config, err := cfg.NewConfig(
 		rule,
 		ruleDir,
 		skipList,
 		enableCPUProfile,
 		enableMemProfile,
 	)
-
 	if err != nil {
-		slog.Error("failed to load config", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	if config.EnableCPUProfile {
 		f, err := os.Create("cpu.prof")
 		if err != nil {
-			slog.Error("could not create CPU profile", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("could not create CPU profile: %w", err)
 		}
 		defer f.Close()
 		if err := pprof.StartCPUProfile(f); err != nil {
-			slog.Error("could not start CPU profile", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("could not start CPU profile: %w", err)
 		}
 		defer pprof.StopCPUProfile()
 	}
 
 	hound, err := slamhound.New(config)
 	if err != nil {
-		slog.Error("failed to create scanner", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create scanner: %w", err)
 	}
 
 	for _, target := range args {
 		var (
 			results []slamhound.Result
-			err     error
+			scanErr error
 		)
 
 		fi, err := os.Stat(target)
 		if err != nil {
-			slog.Error("failed to stat target", "target", target, "error", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to stat target %s: %w", target, err)
 		}
 		switch mode := fi.Mode(); {
 		case mode.IsDir():
-			results, err = hound.ScanDirectory(target)
+			results, scanErr = hound.ScanDirectory(target)
 		case mode.IsRegular():
-			results, err = hound.ScanArchive(target)
+			results, scanErr = hound.ScanArchive(target)
 		default:
-			slog.Error("cannot scan non-directories or non-files", "target", target)
-			os.Exit(1)
+			return fmt.Errorf("cannot scan non-directory or non-file: %s", target)
 		}
 
-		if err != nil {
-			slog.Error("error while scanning", "target", target, "error", err)
-			os.Exit(1)
+		if scanErr != nil {
+			return fmt.Errorf("error while scanning %s: %w", target, scanErr)
 		}
 		for _, result := range results {
 			result.LogResult()
@@ -99,14 +97,14 @@ func main() {
 	if config.EnableMemProfile {
 		f, err := os.Create("mem.prof")
 		if err != nil {
-			slog.Error("could not create memory profile", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("could not create memory profile: %w", err)
 		}
 		defer f.Close()
-		runtime.GC() // get up-to-date statistics
+		runtime.GC()
 		if err := pprof.WriteHeapProfile(f); err != nil {
-			slog.Error("could not write memory profile", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("could not write memory profile: %w", err)
 		}
 	}
+
+	return nil
 }
