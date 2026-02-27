@@ -33,15 +33,18 @@ func (r *Result) FormatMatches() []string {
 // MarshalJSON marshals a Result into JSON
 func (r *Result) MarshalJSON() ([]byte, error) {
 	type Alias Result
-	marshalled, err := json.Marshal(&struct {
+	aux := &struct {
 		*Alias
 		Matches []string `json:"matches"`
+		Error   string   `json:"error,omitempty"`
 	}{
 		Alias:   (*Alias)(r),
 		Matches: r.FormatMatches(),
-	})
-
-	return marshalled, err
+	}
+	if r.Err != nil {
+		aux.Error = r.Err.Error()
+	}
+	return json.Marshal(aux)
 }
 
 // LogResult prints the result, showing matches for a particular filepath

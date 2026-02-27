@@ -1,6 +1,7 @@
 package slamhound
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -93,6 +94,15 @@ func TestMarshsalJSON(t *testing.T) {
 				Matches: []MatchInfo{},
 			},
 			expected: `{"path":"test.txt","matches":null}`,
+		},
+		{
+			desc: "correctly marshals error as string in JSON",
+			result: Result{
+				Path:    "test.txt",
+				Matches: []MatchInfo{},
+				Err:     errors.New("scan failed"),
+			},
+			expected: `{"path":"test.txt","matches":null,"error":"scan failed"}`,
 		},
 	}
 	for _, tC := range testCases {
