@@ -3,31 +3,36 @@ on: [push, pull_request]
 jobs:
   ci:
     env:
-      YARA_VERSION: 4.3.1
+      YARA_X_VERSION: "0.12.0"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: "1.20"
-      - name: env
+          go-version: "1.26"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: install-yara-x
         run: |
-          pwd
-          env
-          cat /etc/debian_version
-          go version
-          gcc --version
-          echo "YARA_VERSION=${YARA_VERSION}"
-      - name: install-yara
-        run: |
-          wget --no-verbose -O- https://github.com/VirusTotal/yara/archive/v${YARA_VERSION}.tar.gz | tar -C .. -xzf -
-          ( cd ../yara-${YARA_VERSION} && ./bootstrap.sh )
-          mkdir -p ../yara-build
-          ( cd ../yara-build && \
-            ../yara-${YARA_VERSION}/configure --disable-shared --prefix=${HOME}/prefix )
-          make -C ../yara-build install
-          find ${HOME}/prefix
+          git clone --depth 1 --branch v${YARA_X_VERSION} https://github.com/VirusTotal/yara-x.git ../yara-x
+          cd ../yara-x
+          cargo build --release -p yara-x-capi
+          sudo cp target/release/libyara_x_capi.so /usr/local/lib/
+          sudo cp target/release/libyara_x_capi.a /usr/local/lib/
+          sudo cp capi/include/yara_x.h /usr/local/include/
+          sudo cp capi/yara_x_capi.pc /usr/local/lib/pkgconfig/ || \
+            sudo tee /usr/local/lib/pkgconfig/yara_x_capi.pc <<'PKGEOF'
+          prefix=/usr/local
+          exec_prefix=${prefix}
+          libdir=${prefix}/lib
+          includedir=${prefix}/include
+
+          Name: yara_x_capi
+          Description: YARA-X C API
+          Version: 0.12.0
+          Libs: -L${libdir} -lyara_x_capi
+          Cflags: -I${includedir}
+          Libs.private: -lm -ldl -lpthread
+          PKGEOF
+          sudo ldconfig
       - name: test
-        run: |
-          export PKG_CONFIG_PATH=${HOME}/prefix/lib/pkgconfig
-          go test -tags yara_static -v ./...
+        run: go test -v ./...
